@@ -1,0 +1,68 @@
+name: Build Autonstyle Android APK
+
+on:
+  push:
+    branches: [ main, master ]
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  build-apk:
+    name: Build Debug APK
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up JDK 21
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '21'
+
+      - name: Set up Android SDK
+        uses: android-actions/setup-android@v3
+
+      - name: Accept Android SDK licenses
+        run: |
+          yes | sdkmanager --licenses > /dev/null 2>&1 || true
+
+      - name: Set up Gradle 9.3.1
+        uses: gradle/actions/setup-gradle@v4
+        with:
+          gradle-version: '9.3.1'
+
+      - name: Decode debug keystore
+        run: |
+          if [ -f debug.keystore.base64 ] && [ ! -f debug.keystore ]; then
+            base64 -d debug.keystore.base64 > debug.keystore
+          fi
+
+      - name: Build Debug APK
+        run: gradle :app:assembleDebug --no-daemon
+
+      - name: Prepare APK output
+        run: |
+          mkdir -p apk-output
+          cp app/build/outputs/apk/debug/app-debug.apk apk-output/Autonstyle-Business-Manager.apk
+
+      - name: Upload APK Artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: Autonstyle-Business-Manager-APK
+          path: apk-output/Autonstyle-Business-Manager.apk
+          retention-days: 30
+
+      - name: Publish Direct APK Release
+        continue-on-error: true
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: apk-v${{ github.run_number }}
+          name: Autonstyle APK Build #${{ github.run_number }}
+          body: |
+            Automated APK build for **Autonstyle Business Manager**.
+            Tap `Autonstyle-Business-Manager.apk` below to download and install on Android.
+          files: apk-output/Autonstyle-Business-Manager.apk
