@@ -1,0 +1,349 @@
+{
+  "entities": {
+    "Product": {
+      "title": "Product",
+      "description": "Automotive product inventory record with pricing, stock thresholds, and assigned packaging.",
+      "type": "object",
+      "properties": {
+        "userId": { "type": "string", "description": "Owner Firebase Auth UID." },
+        "name": { "type": "string", "description": "Product display name." },
+        "sku": { "type": "string", "description": "Unique Stock Keeping Unit code." },
+        "category": { "type": "string", "description": "Automotive product category." },
+        "purchasePrice": { "type": "number", "description": "Current unit purchase cost in BDT." },
+        "sellingPrice": { "type": "number", "description": "Current unit selling price in BDT." },
+        "availableStock": { "type": "integer", "description": "Sellable stock units available." },
+        "minStockLevel": { "type": "integer", "description": "Custom low stock alert threshold." },
+        "damagedStock": { "type": "integer", "description": "Damaged units received from returns." },
+        "assignedPackaging": { "type": "array", "description": "Assigned packaging material mappings per unit." },
+        "createdAt": { "type": "string", "format": "date-time", "description": "Server timestamp on creation (FieldValue.serverTimestamp())." },
+        "updatedAt": { "type": "string", "format": "date-time", "description": "Server timestamp on update (FieldValue.serverTimestamp())." }
+      },
+      "required": [
+        "userId",
+        "name",
+        "sku",
+        "category",
+        "purchasePrice",
+        "sellingPrice",
+        "availableStock",
+        "minStockLevel",
+        "damagedStock",
+        "assignedPackaging",
+        "createdAt",
+        "updatedAt"
+      ]
+    },
+    "ProductPurchase": {
+      "title": "ProductPurchase",
+      "description": "Immutable stock-in record for product purchases.",
+      "type": "object",
+      "properties": {
+        "userId": { "type": "string" },
+        "productId": { "type": "string" },
+        "productName": { "type": "string" },
+        "sku": { "type": "string" },
+        "supplier": { "type": "string" },
+        "purchaseDate": { "type": "string", "description": "Date in DD-MM-YYYY (Asia/Dhaka)." },
+        "purchaseEpochMs": { "type": "integer" },
+        "quantity": { "type": "integer" },
+        "unitPrice": { "type": "number" },
+        "totalCost": { "type": "number" },
+        "notes": { "type": "string" },
+        "createdAt": { "type": "string", "format": "date-time" }
+      },
+      "required": [
+        "userId",
+        "productId",
+        "productName",
+        "sku",
+        "supplier",
+        "purchaseDate",
+        "purchaseEpochMs",
+        "quantity",
+        "unitPrice",
+        "totalCost",
+        "notes",
+        "createdAt"
+      ]
+    },
+    "PackagingItem": {
+      "title": "PackagingItem",
+      "description": "Packaging inventory item tracking purchased, available, used, and wasted quantities.",
+      "type": "object",
+      "properties": {
+        "userId": { "type": "string" },
+        "name": { "type": "string" },
+        "purchasePrice": { "type": "number" },
+        "purchasedQty": { "type": "integer" },
+        "availableQty": { "type": "integer" },
+        "minStockLevel": { "type": "integer" },
+        "usedQty": { "type": "integer" },
+        "wastedQty": { "type": "integer" },
+        "supplier": { "type": "string" },
+        "lastPurchaseDate": { "type": "string" },
+        "createdAt": { "type": "string", "format": "date-time" },
+        "updatedAt": { "type": "string", "format": "date-time" }
+      },
+      "required": [
+        "userId",
+        "name",
+        "purchasePrice",
+        "purchasedQty",
+        "availableQty",
+        "minStockLevel",
+        "usedQty",
+        "wastedQty",
+        "supplier",
+        "lastPurchaseDate",
+        "createdAt",
+        "updatedAt"
+      ]
+    },
+    "PackagingPurchase": {
+      "title": "PackagingPurchase",
+      "description": "Immutable stock-in record for packaging material purchases.",
+      "type": "object",
+      "properties": {
+        "userId": { "type": "string" },
+        "packagingId": { "type": "string" },
+        "packagingName": { "type": "string" },
+        "supplier": { "type": "string" },
+        "purchaseDate": { "type": "string" },
+        "purchaseEpochMs": { "type": "integer" },
+        "quantity": { "type": "integer" },
+        "unitPrice": { "type": "number" },
+        "totalCost": { "type": "number" },
+        "notes": { "type": "string" },
+        "createdAt": { "type": "string", "format": "date-time" }
+      },
+      "required": [
+        "userId",
+        "packagingId",
+        "packagingName",
+        "supplier",
+        "purchaseDate",
+        "purchaseEpochMs",
+        "quantity",
+        "unitPrice",
+        "totalCost",
+        "notes",
+        "createdAt"
+      ]
+    },
+    "Order": {
+      "title": "Order",
+      "description": "Customer order with line items, atomic stock deduction lock, and cost breakdown.",
+      "type": "object",
+      "properties": {
+        "userId": { "type": "string" },
+        "invoiceNumber": { "type": "string" },
+        "customerName": { "type": "string" },
+        "customerPhone": { "type": "string" },
+        "customerAddress": { "type": "string" },
+        "orderDate": { "type": "string" },
+        "orderEpochMs": { "type": "integer" },
+        "items": { "type": "array" },
+        "subtotal": { "type": "number" },
+        "discountAmount": { "type": "number" },
+        "deliveryCharge": { "type": "number" },
+        "totalAmount": { "type": "number" },
+        "status": {
+          "type": "string",
+          "enum": ["PENDING", "PACKED", "DISPATCHED", "DELIVERED", "CANCELLED", "PARTIAL_RETURN", "RETURNED"]
+        },
+        "courierName": { "type": "string" },
+        "trackingNumber": { "type": "string" },
+        "deliveryNote": { "type": "string" },
+        "stockDeducted": { "type": "boolean" },
+        "productCostTotal": { "type": "number" },
+        "packagingCostTotal": { "type": "number" },
+        "packagingBreakdown": { "type": "array" },
+        "returnedAmount": { "type": "number" },
+        "returnedQtyTotal": { "type": "integer" },
+        "createdAt": { "type": "string", "format": "date-time" },
+        "updatedAt": { "type": "string", "format": "date-time" }
+      },
+      "required": [
+        "userId",
+        "invoiceNumber",
+        "customerName",
+        "customerPhone",
+        "customerAddress",
+        "orderDate",
+        "orderEpochMs",
+        "items",
+        "subtotal",
+        "discountAmount",
+        "deliveryCharge",
+        "totalAmount",
+        "status",
+        "courierName",
+        "trackingNumber",
+        "deliveryNote",
+        "stockDeducted",
+        "productCostTotal",
+        "packagingCostTotal",
+        "packagingBreakdown",
+        "returnedAmount",
+        "returnedQtyTotal",
+        "createdAt",
+        "updatedAt"
+      ]
+    },
+    "ProductReturn": {
+      "title": "ProductReturn",
+      "description": "Immutable product return record tracking resellable vs damaged disposition and courier fee.",
+      "type": "object",
+      "properties": {
+        "userId": { "type": "string" },
+        "orderId": { "type": "string" },
+        "invoiceNumber": { "type": "string" },
+        "productId": { "type": "string" },
+        "productName": { "type": "string" },
+        "returnedQty": { "type": "integer" },
+        "refundAmount": { "type": "number" },
+        "restoredCostAmount": { "type": "number" },
+        "reason": { "type": "string" },
+        "returnCourierCharge": { "type": "number" },
+        "isReceived": { "type": "boolean" },
+        "isResellable": { "type": "boolean" },
+        "returnDate": { "type": "string" },
+        "returnEpochMs": { "type": "integer" },
+        "createdAt": { "type": "string", "format": "date-time" }
+      },
+      "required": [
+        "userId",
+        "orderId",
+        "invoiceNumber",
+        "productId",
+        "productName",
+        "returnedQty",
+        "refundAmount",
+        "restoredCostAmount",
+        "reason",
+        "returnCourierCharge",
+        "isReceived",
+        "isResellable",
+        "returnDate",
+        "returnEpochMs",
+        "createdAt"
+      ]
+    },
+    "Expense": {
+      "title": "Expense",
+      "description": "Business operating expense categorized for P&L and deduplication.",
+      "type": "object",
+      "properties": {
+        "userId": { "type": "string" },
+        "category": {
+          "type": "string",
+          "enum": ["FACEBOOK_ADS", "COURIER", "RETURN_COURIER", "PACKAGING", "WEBSITE_MAINTENANCE", "TRANSPORTATION", "OTHER"]
+        },
+        "title": { "type": "string" },
+        "amount": { "type": "number" },
+        "expenseDate": { "type": "string" },
+        "expenseEpochMs": { "type": "integer" },
+        "notes": { "type": "string" },
+        "linkedReferenceId": { "type": "string" },
+        "createdAt": { "type": "string", "format": "date-time" },
+        "updatedAt": { "type": "string", "format": "date-time" }
+      },
+      "required": [
+        "userId",
+        "category",
+        "title",
+        "amount",
+        "expenseDate",
+        "expenseEpochMs",
+        "notes",
+        "linkedReferenceId",
+        "createdAt",
+        "updatedAt"
+      ]
+    },
+    "StockTransaction": {
+      "title": "StockTransaction",
+      "description": "Immutable audit ledger entry for all atomic product and packaging stock movements.",
+      "type": "object",
+      "properties": {
+        "userId": { "type": "string" },
+        "itemType": { "type": "string", "enum": ["PRODUCT", "PACKAGING"] },
+        "itemId": { "type": "string" },
+        "itemName": { "type": "string" },
+        "txType": {
+          "type": "string",
+          "enum": [
+            "PRODUCT_PURCHASE",
+            "ORDER_DEDUCTION",
+            "PACKAGING_PURCHASE",
+            "PACKAGING_WASTE",
+            "RETURN_RESELLABLE",
+            "RETURN_DAMAGED",
+            "ORDER_CANCEL_RESTORE"
+          ]
+        },
+        "quantityDelta": { "type": "integer" },
+        "stockBefore": { "type": "integer" },
+        "stockAfter": { "type": "integer" },
+        "unitCost": { "type": "number" },
+        "totalValue": { "type": "number" },
+        "referenceId": { "type": "string" },
+        "referenceLabel": { "type": "string" },
+        "txDate": { "type": "string" },
+        "txEpochMs": { "type": "integer" },
+        "createdAt": { "type": "string", "format": "date-time" }
+      },
+      "required": [
+        "userId",
+        "itemType",
+        "itemId",
+        "itemName",
+        "txType",
+        "quantityDelta",
+        "stockBefore",
+        "stockAfter",
+        "unitCost",
+        "totalValue",
+        "referenceId",
+        "referenceLabel",
+        "txDate",
+        "txEpochMs",
+        "createdAt"
+      ]
+    }
+  },
+  "firestore": {
+    "/users/{userId}/products/{productId}": {
+      "schema": { "$ref": "#/entities/Product" },
+      "description": "Products owned by the authenticated business user."
+    },
+    "/users/{userId}/productPurchases/{purchaseId}": {
+      "schema": { "$ref": "#/entities/ProductPurchase" },
+      "description": "Immutable product purchase records."
+    },
+    "/users/{userId}/packagingItems/{packagingId}": {
+      "schema": { "$ref": "#/entities/PackagingItem" },
+      "description": "Packaging material inventory items."
+    },
+    "/users/{userId}/packagingPurchases/{purchaseId}": {
+      "schema": { "$ref": "#/entities/PackagingPurchase" },
+      "description": "Immutable packaging material purchase records."
+    },
+    "/users/{userId}/orders/{orderId}": {
+      "schema": { "$ref": "#/entities/Order" },
+      "description": "Customer orders with atomic stock deduction status."
+    },
+    "/users/{userId}/returns/{returnId}": {
+      "schema": { "$ref": "#/entities/ProductReturn" },
+      "description": "Immutable product return processing records."
+    },
+    "/users/{userId}/expenses/{expenseId}": {
+      "schema": { "$ref": "#/entities/Expense" },
+      "description": "Categorized business expenses."
+    },
+    "/users/{userId}/stockTransactions/{txId}": {
+      "schema": { "$ref": "#/entities/StockTransaction" },
+      "description": "Immutable stock movement audit history."
+    }
+  }
+}

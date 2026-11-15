@@ -1,0 +1,302 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    // Global safety net: deny all by default
+    match /{document=**} {
+      allow read, write: if false;
+    }
+
+    function isSignedIn() {
+      return request.auth != null;
+    }
+
+    function isOwner(userId) {
+      return isSignedIn() && request.auth.uid == userId;
+    }
+
+    function isValidId(id) {
+      return id is string && id.size() >= 1 && id.size() <= 128 && id.matches('^[a-zA-Z0-9_\\-]+$');
+    }
+
+    function incoming() {
+      return request.resource.data;
+    }
+
+    function existing() {
+      return resource.data;
+    }
+
+    function isNonNegNum(val) {
+      return val is number && val >= 0;
+    }
+
+    function isNonNegInt(val) {
+      return val is int && val >= 0;
+    }
+
+    function isPosInt(val) {
+      return val is int && val > 0;
+    }
+
+    function isDateStr(val) {
+      return val is string && val.size() == 10 && val.matches('^\\d{2}-\\d{2}-\\d{4}$');
+    }
+
+    function isValidTimestamp(val) {
+      return val is timestamp && val <= request.time;
+    }
+
+    function isValidProduct(data, userId) {
+      return data.userId == userId &&
+             data.name is string && data.name.size() >= 1 && data.name.size() <= 120 &&
+             data.sku is string && data.sku.size() >= 1 && data.sku.size() <= 60 &&
+             data.category is string && data.category.size() >= 1 && data.category.size() <= 80 &&
+             isNonNegNum(data.purchasePrice) &&
+             isNonNegNum(data.sellingPrice) &&
+             isNonNegInt(data.availableStock) &&
+             isNonNegInt(data.minStockLevel) &&
+             isNonNegInt(data.damagedStock) &&
+             data.assignedPackaging is list && data.assignedPackaging.size() <= 25 &&
+             (data.assignedPackaging.size() == 0 || data.assignedPackaging[0] is map) &&
+             isValidTimestamp(data.createdAt) &&
+             isValidTimestamp(data.updatedAt);
+    }
+
+    function isValidProductPurchase(data, userId) {
+      return data.userId == userId &&
+             isValidId(data.productId) &&
+             data.productName is string && data.productName.size() >= 1 && data.productName.size() <= 120 &&
+             data.sku is string && data.sku.size() >= 1 && data.sku.size() <= 60 &&
+             data.supplier is string && data.supplier.size() >= 1 && data.supplier.size() <= 120 &&
+             isDateStr(data.purchaseDate) &&
+             isNonNegInt(data.purchaseEpochMs) &&
+             isPosInt(data.quantity) &&
+             isNonNegNum(data.unitPrice) &&
+             isNonNegNum(data.totalCost) &&
+             data.notes is string && data.notes.size() <= 300 &&
+             isValidTimestamp(data.createdAt);
+    }
+
+    function isValidPackagingItem(data, userId) {
+      return data.userId == userId &&
+             data.name is string && data.name.size() >= 1 && data.name.size() <= 120 &&
+             isNonNegNum(data.purchasePrice) &&
+             isNonNegInt(data.purchasedQty) &&
+             isNonNegInt(data.availableQty) &&
+             isNonNegInt(data.minStockLevel) &&
+             isNonNegInt(data.usedQty) &&
+             isNonNegInt(data.wastedQty) &&
+             data.supplier is string && data.supplier.size() <= 120 &&
+             data.lastPurchaseDate is string && data.lastPurchaseDate.size() <= 20 &&
+             isValidTimestamp(data.createdAt) &&
+             isValidTimestamp(data.updatedAt);
+    }
+
+    function isValidPackagingPurchase(data, userId) {
+      return data.userId == userId &&
+             isValidId(data.packagingId) &&
+             data.packagingName is string && data.packagingName.size() >= 1 && data.packagingName.size() <= 120 &&
+             data.supplier is string && data.supplier.size() >= 1 && data.supplier.size() <= 120 &&
+             isDateStr(data.purchaseDate) &&
+             isNonNegInt(data.purchaseEpochMs) &&
+             isPosInt(data.quantity) &&
+             isNonNegNum(data.unitPrice) &&
+             isNonNegNum(data.totalCost) &&
+             data.notes is string && data.notes.size() <= 300 &&
+             isValidTimestamp(data.createdAt);
+    }
+
+    function isValidOrderStatus(status) {
+      return status in ['PENDING', 'PACKED', 'DISPATCHED', 'DELIVERED', 'CANCELLED', 'PARTIAL_RETURN', 'RETURNED'];
+    }
+
+    function isValidOrder(data, userId) {
+      return data.userId == userId &&
+             data.invoiceNumber is string && data.invoiceNumber.size() >= 1 && data.invoiceNumber.size() <= 60 &&
+             data.customerName is string && data.customerName.size() >= 1 && data.customerName.size() <= 120 &&
+             data.customerPhone is string && data.customerPhone.size() <= 40 &&
+             data.customerAddress is string && data.customerAddress.size() <= 300 &&
+             isDateStr(data.orderDate) &&
+             isNonNegInt(data.orderEpochMs) &&
+             data.items is list && data.items.size() >= 1 && data.items.size() <= 50 &&
+             (data.items[0] is map) &&
+             isNonNegNum(data.subtotal) &&
+             isNonNegNum(data.discountAmount) &&
+             isNonNegNum(data.deliveryCharge) &&
+             isNonNegNum(data.totalAmount) &&
+             isValidOrderStatus(data.status) &&
+             data.courierName is string && data.courierName.size() <= 100 &&
+             data.trackingNumber is string && data.trackingNumber.size() <= 100 &&
+             data.deliveryNote is string && data.deliveryNote.size() <= 300 &&
+             data.stockDeducted is bool &&
+             isNonNegNum(data.productCostTotal) &&
+             isNonNegNum(data.packagingCostTotal) &&
+             data.packagingBreakdown is list && data.packagingBreakdown.size() <= 50 &&
+             (data.packagingBreakdown.size() == 0 || data.packagingBreakdown[0] is map) &&
+             isNonNegNum(data.returnedAmount) &&
+             isNonNegInt(data.returnedQtyTotal) &&
+             isValidTimestamp(data.createdAt) &&
+             isValidTimestamp(data.updatedAt);
+    }
+
+    function isValidProductReturn(data, userId) {
+      return data.userId == userId &&
+             isValidId(data.orderId) &&
+             data.invoiceNumber is string && data.invoiceNumber.size() >= 1 && data.invoiceNumber.size() <= 60 &&
+             isValidId(data.productId) &&
+             data.productName is string && data.productName.size() >= 1 && data.productName.size() <= 120 &&
+             isPosInt(data.returnedQty) &&
+             isNonNegNum(data.refundAmount) &&
+             isNonNegNum(data.restoredCostAmount) &&
+             data.reason is string && data.reason.size() >= 1 && data.reason.size() <= 300 &&
+             isNonNegNum(data.returnCourierCharge) &&
+             data.isReceived is bool &&
+             data.isResellable is bool &&
+             isDateStr(data.returnDate) &&
+             isNonNegInt(data.returnEpochMs) &&
+             isValidTimestamp(data.createdAt);
+    }
+
+    function isValidExpenseCategory(cat) {
+      return cat in ['FACEBOOK_ADS', 'COURIER', 'RETURN_COURIER', 'PACKAGING', 'WEBSITE_MAINTENANCE', 'TRANSPORTATION', 'OTHER'];
+    }
+
+    function isValidExpense(data, userId) {
+      return data.userId == userId &&
+             isValidExpenseCategory(data.category) &&
+             data.title is string && data.title.size() >= 1 && data.title.size() <= 160 &&
+             isNonNegNum(data.amount) &&
+             isDateStr(data.expenseDate) &&
+             isNonNegInt(data.expenseEpochMs) &&
+             data.notes is string && data.notes.size() <= 300 &&
+             data.linkedReferenceId is string && data.linkedReferenceId.size() <= 128 &&
+             isValidTimestamp(data.createdAt) &&
+             isValidTimestamp(data.updatedAt);
+    }
+
+    function isValidStockTransaction(data, userId) {
+      return data.userId == userId &&
+             data.itemType in ['PRODUCT', 'PACKAGING'] &&
+             isValidId(data.itemId) &&
+             data.itemName is string && data.itemName.size() >= 1 && data.itemName.size() <= 120 &&
+             data.txType in ['PRODUCT_PURCHASE', 'ORDER_DEDUCTION', 'PACKAGING_PURCHASE', 'PACKAGING_WASTE', 'RETURN_RESELLABLE', 'RETURN_DAMAGED', 'ORDER_CANCEL_RESTORE'] &&
+             data.quantityDelta is int &&
+             isNonNegInt(data.stockBefore) &&
+             isNonNegInt(data.stockAfter) &&
+             isNonNegNum(data.unitCost) &&
+             isNonNegNum(data.totalValue) &&
+             data.referenceId is string && data.referenceId.size() <= 128 &&
+             data.referenceLabel is string && data.referenceLabel.size() <= 120 &&
+             isDateStr(data.txDate) &&
+             isNonNegInt(data.txEpochMs) &&
+             isValidTimestamp(data.createdAt);
+    }
+
+    match /users/{userId} {
+      allow read, write: if false;
+
+      match /products/{productId} {
+        allow list: if isOwner(userId);
+        allow get: if isOwner(userId) && isValidId(productId);
+        allow create: if isOwner(userId) && isValidId(productId) &&
+                         incoming().keys().hasAll(['userId', 'name', 'sku', 'category', 'purchasePrice', 'sellingPrice', 'availableStock', 'minStockLevel', 'damagedStock', 'assignedPackaging', 'createdAt', 'updatedAt']) &&
+                         incoming().keys().hasOnly(['userId', 'name', 'sku', 'category', 'purchasePrice', 'sellingPrice', 'availableStock', 'minStockLevel', 'damagedStock', 'assignedPackaging', 'createdAt', 'updatedAt']) &&
+                         isValidProduct(incoming(), userId);
+        allow update: if isOwner(userId) && isValidId(productId) &&
+                         isValidProduct(incoming(), userId) &&
+                         incoming().userId == existing().userId &&
+                         incoming().createdAt == existing().createdAt &&
+                         incoming().diff(existing()).affectedKeys().hasOnly(['name', 'sku', 'category', 'purchasePrice', 'sellingPrice', 'availableStock', 'minStockLevel', 'damagedStock', 'assignedPackaging', 'updatedAt']);
+        allow delete: if isOwner(userId) && isValidId(productId);
+      }
+
+      match /productPurchases/{purchaseId} {
+        allow list: if isOwner(userId);
+        allow get: if isOwner(userId) && isValidId(purchaseId);
+        allow create: if isOwner(userId) && isValidId(purchaseId) &&
+                         incoming().keys().hasAll(['userId', 'productId', 'productName', 'sku', 'supplier', 'purchaseDate', 'purchaseEpochMs', 'quantity', 'unitPrice', 'totalCost', 'notes', 'createdAt']) &&
+                         incoming().keys().hasOnly(['userId', 'productId', 'productName', 'sku', 'supplier', 'purchaseDate', 'purchaseEpochMs', 'quantity', 'unitPrice', 'totalCost', 'notes', 'createdAt']) &&
+                         isValidProductPurchase(incoming(), userId);
+        allow update, delete: if false;
+      }
+
+      match /packagingItems/{packagingId} {
+        allow list: if isOwner(userId);
+        allow get: if isOwner(userId) && isValidId(packagingId);
+        allow create: if isOwner(userId) && isValidId(packagingId) &&
+                         incoming().keys().hasAll(['userId', 'name', 'purchasePrice', 'purchasedQty', 'availableQty', 'minStockLevel', 'usedQty', 'wastedQty', 'supplier', 'lastPurchaseDate', 'createdAt', 'updatedAt']) &&
+                         incoming().keys().hasOnly(['userId', 'name', 'purchasePrice', 'purchasedQty', 'availableQty', 'minStockLevel', 'usedQty', 'wastedQty', 'supplier', 'lastPurchaseDate', 'createdAt', 'updatedAt']) &&
+                         isValidPackagingItem(incoming(), userId);
+        allow update: if isOwner(userId) && isValidId(packagingId) &&
+                         isValidPackagingItem(incoming(), userId) &&
+                         incoming().userId == existing().userId &&
+                         incoming().createdAt == existing().createdAt &&
+                         incoming().diff(existing()).affectedKeys().hasOnly(['name', 'purchasePrice', 'purchasedQty', 'availableQty', 'minStockLevel', 'usedQty', 'wastedQty', 'supplier', 'lastPurchaseDate', 'updatedAt']);
+        allow delete: if isOwner(userId) && isValidId(packagingId);
+      }
+
+      match /packagingPurchases/{purchaseId} {
+        allow list: if isOwner(userId);
+        allow get: if isOwner(userId) && isValidId(purchaseId);
+        allow create: if isOwner(userId) && isValidId(purchaseId) &&
+                         incoming().keys().hasAll(['userId', 'packagingId', 'packagingName', 'supplier', 'purchaseDate', 'purchaseEpochMs', 'quantity', 'unitPrice', 'totalCost', 'notes', 'createdAt']) &&
+                         incoming().keys().hasOnly(['userId', 'packagingId', 'packagingName', 'supplier', 'purchaseDate', 'purchaseEpochMs', 'quantity', 'unitPrice', 'totalCost', 'notes', 'createdAt']) &&
+                         isValidPackagingPurchase(incoming(), userId);
+        allow update, delete: if false;
+      }
+
+      match /orders/{orderId} {
+        allow list: if isOwner(userId);
+        allow get: if isOwner(userId) && isValidId(orderId);
+        allow create: if isOwner(userId) && isValidId(orderId) &&
+                         incoming().keys().hasAll(['userId', 'invoiceNumber', 'customerName', 'customerPhone', 'customerAddress', 'orderDate', 'orderEpochMs', 'items', 'subtotal', 'discountAmount', 'deliveryCharge', 'totalAmount', 'status', 'courierName', 'trackingNumber', 'deliveryNote', 'stockDeducted', 'productCostTotal', 'packagingCostTotal', 'packagingBreakdown', 'returnedAmount', 'returnedQtyTotal', 'createdAt', 'updatedAt']) &&
+                         incoming().keys().hasOnly(['userId', 'invoiceNumber', 'customerName', 'customerPhone', 'customerAddress', 'orderDate', 'orderEpochMs', 'items', 'subtotal', 'discountAmount', 'deliveryCharge', 'totalAmount', 'status', 'courierName', 'trackingNumber', 'deliveryNote', 'stockDeducted', 'productCostTotal', 'packagingCostTotal', 'packagingBreakdown', 'returnedAmount', 'returnedQtyTotal', 'createdAt', 'updatedAt']) &&
+                         isValidOrder(incoming(), userId);
+        allow update: if isOwner(userId) && isValidId(orderId) &&
+                         isValidOrder(incoming(), userId) &&
+                         incoming().userId == existing().userId &&
+                         incoming().createdAt == existing().createdAt &&
+                         (!existing().stockDeducted || incoming().stockDeducted == true) &&
+                         incoming().returnedQtyTotal >= existing().returnedQtyTotal &&
+                         incoming().diff(existing()).affectedKeys().hasOnly(['status', 'courierName', 'trackingNumber', 'deliveryNote', 'stockDeducted', 'productCostTotal', 'packagingCostTotal', 'packagingBreakdown', 'items', 'returnedAmount', 'returnedQtyTotal', 'updatedAt']);
+        allow delete: if isOwner(userId) && isValidId(orderId) && !existing().stockDeducted;
+      }
+
+      match /returns/{returnId} {
+        allow list: if isOwner(userId);
+        allow get: if isOwner(userId) && isValidId(returnId);
+        allow create: if isOwner(userId) && isValidId(returnId) &&
+                         incoming().keys().hasAll(['userId', 'orderId', 'invoiceNumber', 'productId', 'productName', 'returnedQty', 'refundAmount', 'restoredCostAmount', 'reason', 'returnCourierCharge', 'isReceived', 'isResellable', 'returnDate', 'returnEpochMs', 'createdAt']) &&
+                         incoming().keys().hasOnly(['userId', 'orderId', 'invoiceNumber', 'productId', 'productName', 'returnedQty', 'refundAmount', 'restoredCostAmount', 'reason', 'returnCourierCharge', 'isReceived', 'isResellable', 'returnDate', 'returnEpochMs', 'createdAt']) &&
+                         isValidProductReturn(incoming(), userId);
+        allow update, delete: if false;
+      }
+
+      match /expenses/{expenseId} {
+        allow list: if isOwner(userId);
+        allow get: if isOwner(userId) && isValidId(expenseId);
+        allow create: if isOwner(userId) && isValidId(expenseId) &&
+                         incoming().keys().hasAll(['userId', 'category', 'title', 'amount', 'expenseDate', 'expenseEpochMs', 'notes', 'linkedReferenceId', 'createdAt', 'updatedAt']) &&
+                         incoming().keys().hasOnly(['userId', 'category', 'title', 'amount', 'expenseDate', 'expenseEpochMs', 'notes', 'linkedReferenceId', 'createdAt', 'updatedAt']) &&
+                         isValidExpense(incoming(), userId);
+        allow update: if isOwner(userId) && isValidId(expenseId) &&
+                         isValidExpense(incoming(), userId) &&
+                         incoming().userId == existing().userId &&
+                         incoming().createdAt == existing().createdAt &&
+                         incoming().linkedReferenceId == existing().linkedReferenceId &&
+                         incoming().diff(existing()).affectedKeys().hasOnly(['category', 'title', 'amount', 'expenseDate', 'expenseEpochMs', 'notes', 'updatedAt']);
+        allow delete: if isOwner(userId) && isValidId(expenseId);
+      }
+
+      match /stockTransactions/{txId} {
+        allow list: if isOwner(userId);
+        allow get: if isOwner(userId) && isValidId(txId);
+        allow create: if isOwner(userId) && isValidId(txId) &&
+                         incoming().keys().hasAll(['userId', 'itemType', 'itemId', 'itemName', 'txType', 'quantityDelta', 'stockBefore', 'stockAfter', 'unitCost', 'totalValue', 'referenceId', 'referenceLabel', 'txDate', 'txEpochMs', 'createdAt']) &&
+                         incoming().keys().hasOnly(['userId', 'itemType', 'itemId', 'itemName', 'txType', 'quantityDelta', 'stockBefore', 'stockAfter', 'unitCost', 'totalValue', 'referenceId', 'referenceLabel', 'txDate', 'txEpochMs', 'createdAt']) &&
+                         isValidStockTransaction(incoming(), userId);
+        allow update, delete: if false;
+      }
+    }
+  }
+}

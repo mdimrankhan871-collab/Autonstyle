@@ -1,0 +1,6 @@
+{
+  "name": "Autonstyle",
+  "description": "Autonstyle Business Manager for inventory, packaging, orders, returns, expenses, P&L, and reports.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
